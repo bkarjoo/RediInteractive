@@ -14,15 +14,17 @@ class Interactive(object):
     def __init__(self):
         self.printQueue = Queue()
         # Tkinter components:
-        self.root = Tk()
+        self.root = Tk() # the is the GUI
         self.root.title = "PGF API App"
         self.text_box = ScrolledText(self.root)
         self.runPrintQueue = True
         self.is_running = False
         self.prompt_var = StringVar()
         self.user_input = StringVar()
+        # redi object
         self.of = RediOrderFactory()
         self.google_sheet = None
+        self.confirm_mode = ''
 
     def gui_start(self):
         printer_thread = Thread(target=self.queue_printer)
@@ -124,12 +126,18 @@ class Interactive(object):
             self.submit_row(row)
             # submit_row_thread = Thread(target=self.submit_row,args=[row])
             # submit_row_thread.start()
-        elif ui.upper() == 'SUBMIT ALL':
+        elif ui.upper()[:10] == 'SUBMIT ALL':
             if self.google_sheet.sheet:
                 i = -1
+                toks = ui.split(' ')
+                # if user added a starting row
+                if len(toks) > 2:
+                    row = int(ui.split(' ')[2]) - 1
+                else:
+                    row = 2
                 for _ in self.google_sheet.sheet:
                     i += 1
-                    if i < 2:
+                    if i < (row):
                         continue
                     a = self.submit_row(i)
                     if a == 'b':
@@ -213,6 +221,7 @@ class Interactive(object):
                 self.print2('Command not understood.')
 
     def submit_row(self, r, confirm=True):
+
         try:
             if self.google_sheet:
                 row = self.google_sheet.sheet[r]
@@ -233,9 +242,13 @@ class Interactive(object):
                         or row[3].upper() == 'BUY'
                         or row[3].upper() == 'B'
                 ) else 'sell'
+
+
                 if side == 'sell':
                     quantity *= -1
+
                 o_type = None
+
                 if len(row) >= 7:
                     o_type = row[6].upper()
                 price = 0
@@ -255,14 +268,19 @@ class Interactive(object):
 
                 order_string = '{} {} {} {} {} in {}'.format(
                         side, abs(quantity), symbol, price, o_type, account)
+
+                if self.confirm_mode == 'c': confirm = False
                 if confirm:
-                    confirm_msg = '{}? (y/n/b)'.format(order_string)
+
+                    confirm_msg = '{}? (y/n/b/c)'.format(order_string)
 
                     self.user_input = ''
                     self.prompt_var.set(confirm_msg)
                     while self.user_input == '':
                         time.sleep(.1)
                     inp = self.user_input
+                    self.confirm_mode = inp
+                    if inp == 'c': inp = 'y'
                     self.prompt_var.set('')
                 else:
                     inp = 'y'
@@ -305,24 +323,24 @@ class Interactive(object):
                 sys.stdout.flush()
 
                 symbol = row[1].split()[0].upper()
-                if symbol == '': 
+                if symbol == '':
                     return
                 if row[3] == '':
                     self.print2("Row doesn't have quantity. Enter quantity and reload sheet.")
                     sys.stdout.flush()
                     return
                 quantity = int(row[3])
-                if row[2] == '': 
+                if row[2] == '':
                     return
                 side = 'buy' if (
                         row[2].upper() == 'LONG'
                         or row[2].upper() == 'BUY'
                         or row[2].upper() == 'B'
                 ) else 'sell'
-                if side == 'sell': 
+                if side == 'sell':
                     quantity *= -1
                 order_type = None
-                if len(row) >= 6: 
+                if len(row) >= 6:
                     order_type = row[5].upper()
                 price = 0
                 if len(row) >= 5:
