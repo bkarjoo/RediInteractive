@@ -2,8 +2,8 @@
 import win32com.client
 import pythoncom
 
-account = "7PAD20"
-exchange = "AES US/CAD"
+account = "8AO07074"
+exchange = "APEX QUIK"
 
 
 class RediOrderFactory:
